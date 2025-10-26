@@ -1,0 +1,7 @@
+{
+    "app_name": "json_test",
+    "author": "Ethan Hartman",
+    "version": 1.0,
+    "complete": false,
+    "todo": ["verify loading", "verify saving"]
+}
