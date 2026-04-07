@@ -1,7 +1,7 @@
 Fast as a jiffy, clean as JSON.
 
 Jibby is a high-performance, ergonomic JSON library for C++.
-It started as a personal project — and a fun mispronunciation of "JSON library" by my son — and grew into a lightweight, developer-friendly tool for parsing and generating JSON.
+It started as a personal project — and a fun mispronunciation of "JSON library" by my son, and grew into a lightweight, developer-friendly tool for parsing and generating JSON.
 
 Why Jibby?
 
