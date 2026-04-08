@@ -24,7 +24,7 @@ namespace jibby {
         try{
             JsonParser parser(buffer.str());
             return parser.parse();
-        } catch (const JsonException& e) {
+        } catch (const JsonException&) {
             throw;
         } catch (const std::exception& e) {
             throw JsonException("Error while parsing file: " + filepath + " | " + e.what());
