@@ -7,6 +7,30 @@ using namespace std;
 
 namespace jibby {
 
+namespace {
+
+int hexValue(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return 10 + (c - 'a');
+    if (c >= 'A' && c <= 'F') return 10 + (c - 'A');
+    return -1;
+}
+
+void appendUtf8(string& out, unsigned codePoint) {
+    if (codePoint <= 0x7F) {
+        out.push_back(static_cast<char>(codePoint));
+    } else if (codePoint <= 0x7FF) {
+        out.push_back(static_cast<char>(0xC0 | (codePoint >> 6)));
+        out.push_back(static_cast<char>(0x80 | (codePoint & 0x3F)));
+    } else {
+        out.push_back(static_cast<char>(0xE0 | (codePoint >> 12)));
+        out.push_back(static_cast<char>(0x80 | ((codePoint >> 6) & 0x3F)));
+        out.push_back(static_cast<char>(0x80 | (codePoint & 0x3F)));
+    }
+}
+
+} // namespace
+
 // Utility Methods 
 
 bool JsonTokenizer::isAtEnd() const {
@@ -105,10 +129,30 @@ Token JsonTokenizer::stringToken() {
                 case 'n':  result.push_back('\n'); break;
                 case 'r':  result.push_back('\r'); break;
                 case 't':  result.push_back('\t'); break;
+                case 'u': {
+                    unsigned codePoint = 0;
+                    for (int i = 0; i < 4; ++i) {
+                        if (isAtEnd()) {
+                            throw JsonParseException("Unterminated unicode escape", line, column);
+                        }
+
+                        char hex = advance();
+                        int value = hexValue(hex);
+                        if (value < 0) {
+                            throw JsonParseException("Invalid unicode escape", line, column - 1);
+                        }
+                        codePoint = (codePoint << 4) | static_cast<unsigned>(value);
+                    }
+                    appendUtf8(result, codePoint);
+                    break;
+                }
                 default:
                     throw JsonParseException("Invalid escape character: " + string(1, esc), line, column - 1);
             }
         } else {
+            if (static_cast<unsigned char>(c) < 0x20) {
+                throw JsonParseException("Unescaped control character in string", line, column - 1);
+            }
             result.push_back(c);
         }
     }
@@ -124,12 +168,50 @@ Token JsonTokenizer::numberToken(char firstChar) {
     string numStr;
     numStr.push_back(firstChar);
 
-    while (!isAtEnd()) {
-        char c = peek();
-        if (isdigit(static_cast<unsigned char>(c)) || c == '.' || c == 'e' || c == 'E' || c == '+' || c == '-') {
+    if (firstChar == '-') {
+        if (isAtEnd() || !isdigit(static_cast<unsigned char>(peek()))) {
+            throw JsonParseException("Invalid number", startLine, startColumn);
+        }
+        numStr.push_back(advance());
+    }
+
+    if (numStr.back() == '0') {
+        if (!isAtEnd() && isdigit(static_cast<unsigned char>(peek()))) {
+            throw JsonParseException("Leading zeroes are not allowed", line, column);
+        }
+    } else {
+        while (!isAtEnd() && isdigit(static_cast<unsigned char>(peek()))) {
             numStr.push_back(advance());
-        } else {
-            break;
+        }
+    }
+
+    if (!isAtEnd() && peek() == '.') {
+        numStr.push_back(advance());
+        if (isAtEnd() || !isdigit(static_cast<unsigned char>(peek()))) {
+            throw JsonParseException("Invalid number", line, column);
+        }
+        while (!isAtEnd() && isdigit(static_cast<unsigned char>(peek()))) {
+            numStr.push_back(advance());
+        }
+    }
+
+    if (!isAtEnd() && (peek() == 'e' || peek() == 'E')) {
+        numStr.push_back(advance());
+        if (!isAtEnd() && (peek() == '+' || peek() == '-')) {
+            numStr.push_back(advance());
+        }
+        if (isAtEnd() || !isdigit(static_cast<unsigned char>(peek()))) {
+            throw JsonParseException("Invalid exponent", line, column);
+        }
+        while (!isAtEnd() && isdigit(static_cast<unsigned char>(peek()))) {
+            numStr.push_back(advance());
+        }
+    }
+
+    if (!isAtEnd()) {
+        char c = peek();
+        if (isalpha(static_cast<unsigned char>(c)) || c == '.' || c == '+' || c == '-') {
+            throw JsonParseException("Invalid number", line, column);
         }
     }
 

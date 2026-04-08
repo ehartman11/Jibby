@@ -8,6 +8,36 @@ using namespace std; // Safe here in a .cpp file only
 
 namespace jibby {
 
+namespace {
+
+string escapeJsonString(const string& input) {
+    ostringstream oss;
+
+    for (unsigned char c : input) {
+        switch (c) {
+            case '\"': oss << "\\\""; break;
+            case '\\': oss << "\\\\"; break;
+            case '\b': oss << "\\b"; break;
+            case '\f': oss << "\\f"; break;
+            case '\n': oss << "\\n"; break;
+            case '\r': oss << "\\r"; break;
+            case '\t': oss << "\\t"; break;
+            default:
+                if (c < 0x20) {
+                    static const char* hex = "0123456789abcdef";
+                    oss << "\\u00" << hex[(c >> 4) & 0x0F] << hex[c & 0x0F];
+                } else {
+                    oss << static_cast<char>(c);
+                }
+                break;
+        }
+    }
+
+    return oss.str();
+}
+
+} // namespace
+
 // ---- Constructors ----
 Json::Json() : type(Type::Null), value(nullptr) {}
 Json::Json(std::nullptr_t) : type(Type::Null), value(nullptr) {}
@@ -20,53 +50,53 @@ Json::Json(const Array& arr) : type(Type::Array), value(arr) {}
 
 // ---- Const Accessors ----
 const Object& Json::asObject() const {
-    if (!isObject()) throw runtime_error("Json value is not an object");
+    if (!isObject()) throw JsonException("Json value is not an object");
     return get<Object>(value);
 }
 
 const Array& Json::asArray() const {
-    if (!isArray()) throw runtime_error("Json value is not an array");
+    if (!isArray()) throw JsonException("Json value is not an array");
     return get<Array>(value);
 }
 
 const string& Json::asString() const {
-    if (!isString()) throw runtime_error("Json value is not a string");
+    if (!isString()) throw JsonException("Json value is not a string");
     return get<string>(value);
 }
 
 double Json::asNumber() const {
-    if (!isNumber()) throw runtime_error("Json value is not a number");
+    if (!isNumber()) throw JsonException("Json value is not a number");
     return get<double>(value);
 }
 
 bool Json::asBoolean() const {
-    if (!isBoolean()) throw runtime_error("Json value is not a boolean");
+    if (!isBoolean()) throw JsonException("Json value is not a boolean");
     return get<bool>(value);
 }
 
 // ---- Mutable Accessors ----
 Object& Json::asObject() {
-    if (!isObject()) throw runtime_error("Json value is not an object");
+    if (!isObject()) throw JsonException("Json value is not an object");
     return get<Object>(value);
 }
 
 Array& Json::asArray() {
-    if (!isArray()) throw runtime_error("Json value is not an array");
+    if (!isArray()) throw JsonException("Json value is not an array");
     return get<Array>(value);
 }
 
 string& Json::asString() {
-    if (!isString()) throw runtime_error("Json value is not a string");
+    if (!isString()) throw JsonException("Json value is not a string");
     return get<string>(value);
 }
 
 double& Json::asNumber() {
-    if (!isNumber()) throw runtime_error("Json value is not a number");
+    if (!isNumber()) throw JsonException("Json value is not a number");
     return get<double>(value);
 }
 
 bool& Json::asBoolean() {
-    if (!isBoolean()) throw runtime_error("Json value is not a boolean");
+    if (!isBoolean()) throw JsonException("Json value is not a boolean");
     return get<bool>(value);
 }
 
@@ -196,7 +226,7 @@ string Json::serialize(int indent, int depth) const {
             oss << get<double>(value);
             break;
         case Type::String:
-            oss << "\"" << get<string>(value) << "\"";
+            oss << "\"" << escapeJsonString(get<string>(value)) << "\"";
             break;
 
         case Type::Object: {
@@ -208,7 +238,7 @@ string Json::serialize(int indent, int depth) const {
                 if (indent > 0) {
                     oss << "\n" << string(indent * (depth + 1), ' ');
                 }
-                oss << "\"" << key << "\": " << val.serialize(indent, depth + 1);
+                oss << "\"" << escapeJsonString(key) << "\": " << val.serialize(indent, depth + 1);
                 first = false;
             }
             if (indent > 0 && !obj.empty()) {

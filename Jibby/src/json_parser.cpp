@@ -28,7 +28,11 @@ void JsonParser::expect(TokenType expected, const string& errorMsg) {
 }
 
 Json JsonParser::parse() {
-    return parseValue();
+    Json value = parseValue();
+    if (current.type != TokenType::END_OF_FILE) {
+        throw JsonParseException("Unexpected trailing content", current.line, current.column);
+    }
+    return value;
 }
 
 Json JsonParser::parseValue() {
@@ -88,7 +92,12 @@ Json JsonParser::parseString() {
 }
 
 Json JsonParser::parseNumber() {
-    double num = stod(current.value);
+    double num = 0.0;
+    try {
+        num = stod(current.value);
+    } catch (const std::exception&) {
+        throw JsonParseException("Invalid number", current.line, current.column);
+    }
     advance();
     return Json(num);
 }

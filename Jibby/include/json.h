@@ -18,7 +18,7 @@ namespace jibby {
             Boolean,
             Number,
             String,
-            Object,
+            Object, 
             Array
         };
 
