@@ -58,7 +58,15 @@ Jibby is not trying to be a novel new format or a breakthrough parser. Its value
 
 ## Building
 
-Build the library and test executable with your C++ compiler of choice, including the `include` directory and compiling the sources in `src` along with `tests/test_main.cpp`.
+Jibby now includes a simple `CMakeLists.txt` so it can be built more easily across environments.
+
+```bash
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build
+```
+
+This builds the `jibby` library and the `jibby_tests` executable.
 
 ## Notes
 
